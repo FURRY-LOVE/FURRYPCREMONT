@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система отзывов</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .admin-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: black;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .admin-btn:hover {
+            background: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 60px auto 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .review-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .rating {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .star {
+            font-size: 24px;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star:hover,
+        .star.active {
+            color: #ffc107;
+        }
+
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+
+        .reviews-list {
+            margin-top: 30px;
+        }
+
+        .review-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .review-author {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .review-rating {
+            color: #ffc107;
+        }
+
+        .review-text {
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            display: none;
+            font-size: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .admin-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+            z-index: 1001;
+        }
+
+        .admin-panel h2 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .login-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: #218838;
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Кнопка администратора -->
+    <button class="admin-btn" onclick="showAdminPanel()">АДМИНИСТРАТОР</button>
+
+    <!-- Основной контейнер -->
+    <div class="container">
+        <h1>Система отзывов</h1>
+        
+        <!-- Форма отзыва -->
+        <div class="review-form">
+            <div class="form-group">
+                <label>Имя и фамилия (не обязательно):</label>
+                <input type="text" id="authorName" placeholder="Введите ваше имя">
+            </div>
+            
+            <div class="form-group">
+                <label>Оценка:</label>
+                <div class="rating" id="ratingStars">
+                    <span class="star" data-value="1">★</span>
+                    <span class="star" data-value="2">★</span>
+                    <span class="star" data-value="3">★</span>
+                    <span class="star" data-value="4">★</span>
+                    <span class="star" data-value="5">★</span>
+                </div>
+                <input type="hidden" id="ratingValue" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label>Текст отзыва:</label>
+                <textarea id="reviewText" placeholder="Напишите ваш отзыв..." required></textarea>
+                <div class="error" id="textError">Пожалуйста, напишите текст отзыва</div>
+            </div>
+            
+            <button class="submit-btn" onclick="submitReview()">Опубликовать отзыв</button>
+        </div>
+
+        <!-- Список отзывов -->
+        <div class="reviews-list" id="reviewsList">
+            <div class="loading">Загрузка отзывов...</div>
+        </div>
+    </div>
+
+    <!-- Панель администратора -->
+    <div class="admin-panel" id="adminPanel">
+        <button class="close-btn" onclick="hideAdminPanel()">×</button>
+        <h2>Вход администратора</h2>
+        <div class="form-group">
+            <label>Логин:</label>
+            <input type="text" id="adminLogin" placeholder="Введите логин">
+        </div>
+        <div class="form-group">
+            <label>Пароль:</label>
+            <input type="password" id="adminPassword" placeholder="Введите пароль">
+        </div>
+        <div class="error" id="loginError">Неверный логин или пароль</div>
+        <button class="login-btn" onclick="adminLogin()">Войти</button>
+    </div>
+
+    <script>
+        let currentRating = 0;
+        let isAdmin = false;
+        let reviews = [];
+
+        // Инициализация звезд рейтинга
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                currentRating = value;
+                document.getElementById('ratingValue').value = value;
+                
+                stars.forEach(s => {
+                    const starValue = parseInt(s.getAttribute('data-value'));
+                    if (starValue <= value) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        // Функция для сохранения отзывов в файл
+        async function saveReviewsToFile() {
+            try {
+                const response = await fetch('save_reviews.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ reviews: reviews })
+                });
+                
+                const result = await response.json();
+                if (!result.success) {
+                    console.error('Ошибка сохранения отзывов:', result.error);
+                }
+            } catch (error) {
+                console.error('Ошибка при сохранении отзывов:', error);
+                // Резервное сохранение в localStorage
+                localStorage.setItem('reviews_backup', JSON.stringify(reviews));
+            }
+        }
+
+        // Функция для загрузки отзывов из файла
+        async function loadReviewsFromFile() {
+            try {
+                const response = await fetch('load_reviews.php');
+                const data = await response.json();
+                
+                if (data.success && data.reviews) {
+                    reviews = data.reviews;
+                } else {
+                    // Попытка загрузить из резервной копии
+                    const backup = localStorage.getItem('reviews_backup');
+                    if (backup) {
+                        reviews = JSON.parse(backup);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке отзывов:', error);
+                // Попытка загрузить из резервной копии
+                const backup = localStorage.getItem('reviews_backup');
+                if (backup) {
+                    reviews = JSON.parse(backup);
+                }
+            }
+            
+            displayReviews();
+        }
+
+        // Функция отправки отзыва
+        async function submitReview() {
+            const author = document.getElementById('authorName').value.trim() || 'Аноним';
+            const text = document.getElementById('reviewText').value.trim();
+            const rating = currentRating;
+
+            if (!text) {
+                document.getElementById('textError').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('textError').style.display = 'none';
+
+            const review = {
+                id: Date.now(),
+                author: author,
+                text: text,
+                rating: rating,
+                date: new Date().toLocaleString('ru-RU')
+            };
+
+            reviews.push(review);
+            
+            // Сохраняем в файл
+            await saveReviewsToFile();
+            
+            // Очистка формы
+            document.getElementById('authorName').value = '';
+            document.getElementById('reviewText').value = '';
+            document.getElementById('ratingValue').value = '0';
+            currentRating = 0;
+            
+            stars.forEach(star => {
+                star.classList.remove('active');
+            });
+            
+            displayReviews();
+        }
+
+        // Функция отображения отзывов
+        function displayReviews() {
+            const reviewsList = document.getElementById('reviewsList');
+            
+            if (reviews.length === 0) {
+                reviewsList.innerHTML = '<div class="loading">Пока нет отзывов. Будьте первым!</div>';
+                return;
+            }
+            
+            reviewsList.innerHTML = '';
+
+            reviews.forEach(review => {
+                const reviewElement = document.createElement('div');
+                reviewElement.className = 'review-item';
+                reviewElement.innerHTML = `
+                    <button class="delete-btn" onclick="deleteReview(${review.id})" 
+                            style="${isAdmin ? 'display: flex;' : 'display: none;'}">🗑</button>
+                    <div class="review-header">
+                        <span class="review-author">${review.author}</span>
+                        <span class="review-date">${review.date}</span>
+                    </div>
+                    <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</div>
+                    <div class="review-text">${review.text}</div>
+                `;
+                reviewsList.appendChild(reviewElement);
+            });
+        }
+
+        // Функция удаления отзыва
+        async function deleteReview(reviewId) {
+            if (isAdmin) {
+                const reviewIndex = reviews.findIndex(review => review.id === reviewId);
+                
+                if (reviewIndex !== -1) {
+                    reviews.splice(reviewIndex, 1);
+                    await saveReviewsToFile();
+                    displayReviews();
+                }
+            }
+        }
+
+        // Функции панели администратора
+        function showAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        function hideAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function adminLogin() {
+            const login = document.getElementById('adminLogin').value;
+            const password = document.getElementById('adminPassword').value;
+
+            if (login === 'FURRY' && password === 'FURRY') {
+                isAdmin = true;
+                hideAdminPanel();
+                displayReviews();
+                alert('Режим администратора активирован');
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadReviewsFromFile();
+        });
+
+        // Закрытие панели администратора при клике вне ее
+        document.addEventListener('click', function(event) {
+            const adminPanel = document.getElementById('adminPanel');
+            const adminBtn = document.querySelector('.admin-btn');
+            
+            if (adminPanel.style.display === 'block' && 
+                !adminPanel.contains(event.target) && 
+                !adminBtn.contains(event.target)) {
+                hideAdminPanel();
+            }
+        });
+    </script>
+</body>
+</html>
